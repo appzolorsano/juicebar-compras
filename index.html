@@ -551,15 +551,19 @@ function apiCall(data, onSuccess, onError) {
   }
   data.api_key = API_KEY;
   showLoading('Conectando con Google...');
-  // Apps Script: enviamos con no-cors via form submit en iframe oculto
-  // y paralelamente intentamos fetch normal
+  // Apps Script no permite leer la respuesta desde dominios externos (CORS)
+  // Usamos no-cors: los datos llegan al script pero no podemos leer la respuesta
+  // Asumimos éxito si no hay error de red
   var url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
-  fetch(url, { method: 'GET' })
-  .then(function(r) { return r.json(); })
-  .then(function(resp) {
+  fetch(url, {
+    method: 'GET',
+    mode: 'no-cors',
+    redirect: 'follow'
+  })
+  .then(function() {
+    // no-cors no devuelve respuesta legible — asumimos éxito
     hideLoading();
-    if (resp.ok !== false) { if (onSuccess) onSuccess(resp); }
-    else { if (onError) onError(resp.error || 'Error del servidor'); }
+    if (onSuccess) onSuccess({ ok: true });
   })
   .catch(function(e) {
     hideLoading();
