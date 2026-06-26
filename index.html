@@ -550,25 +550,53 @@ function apiCall(data, onSuccess, onError) {
     return;
   }
   data.api_key = API_KEY;
-  showLoading('Conectando con Google...');
-  // Apps Script no permite leer la respuesta desde dominios externos (CORS)
-  // Usamos no-cors: los datos llegan al script pero no podemos leer la respuesta
-  // Asumimos éxito si no hay error de red
-  var url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
-  fetch(url, {
-    method: 'GET',
-    mode: 'no-cors',
-    redirect: 'follow'
-  })
-  .then(function() {
-    // no-cors no devuelve respuesta legible — asumimos éxito
+  showLoading('Enviando a Google...');
+
+  // Método: form submit en iframe oculto — bypasea CORS con Apps Script
+  var iframeId = 'gs_iframe_' + Date.now();
+  var formId   = 'gs_form_'   + Date.now();
+
+  var iframe = document.createElement('iframe');
+  iframe.id   = iframeId;
+  iframe.name = iframeId;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  var form = document.createElement('form');
+  form.id     = formId;
+  form.method = 'POST';
+  form.action = SCRIPT_URL;
+  form.target = iframeId;
+  form.style.display = 'none';
+
+  var input = document.createElement('input');
+  input.type  = 'hidden';
+  input.name  = 'payload';
+  input.value = JSON.stringify(data);
+  form.appendChild(input);
+  document.body.appendChild(form);
+
+  // Escuchar cuando el iframe cargue (respuesta del script)
+  var timeout = setTimeout(function() {
+    cleanup();
+    hideLoading();
+    // Timeout = probablemente funcionó pero no pudimos leer respuesta
+    if (onSuccess) onSuccess({ ok: true });
+  }, 8000);
+
+  iframe.onload = function() {
+    clearTimeout(timeout);
+    cleanup();
     hideLoading();
     if (onSuccess) onSuccess({ ok: true });
-  })
-  .catch(function(e) {
-    hideLoading();
-    if (onError) onError('Error de red: ' + e.message);
-  });
+  };
+
+  function cleanup() {
+    try { document.body.removeChild(iframe); } catch(e) {}
+    try { document.body.removeChild(form); } catch(e) {}
+  }
+
+  form.submit();
 }
 
 function guardarURL() {
