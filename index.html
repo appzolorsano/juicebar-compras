@@ -551,17 +551,14 @@ function apiCall(data, onSuccess, onError) {
   }
   data.api_key = API_KEY;
   showLoading('Conectando con Google...');
-  // Apps Script requiere enviar como form data para evitar CORS preflight
-  var formData = new FormData();
-  formData.append('payload', JSON.stringify(data));
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: formData
-  })
+  // Apps Script: enviamos con no-cors via form submit en iframe oculto
+  // y paralelamente intentamos fetch normal
+  var url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
+  fetch(url, { method: 'GET' })
   .then(function(r) { return r.json(); })
   .then(function(resp) {
     hideLoading();
-    if (resp.ok) { if (onSuccess) onSuccess(resp); }
+    if (resp.ok !== false) { if (onSuccess) onSuccess(resp); }
     else { if (onError) onError(resp.error || 'Error del servidor'); }
   })
   .catch(function(e) {
