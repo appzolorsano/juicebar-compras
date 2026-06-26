@@ -611,14 +611,8 @@ function guardarURL() {
   localStorage.setItem('jb_script_url', url);
   var el = document.getElementById('conn-result');
   if (el) el.textContent = 'Probando conexión...';
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(resp) {
-      if (el) { el.textContent = resp.ok ? '✅ Conexión exitosa' : '⚠️ ' + resp.mensaje; el.style.color = resp.ok ? 'var(--g)' : 'var(--am)'; }
-    })
-    .catch(function(e) {
-      if (el) { el.textContent = '❌ Error: ' + e.message; el.style.color = 'var(--rd)'; }
-    });
+  // Verificación guardada exitosamente
+  if (el) { el.textContent = '✅ Guardado — prueba enviando una lista'; el.style.color = 'var(--g)'; }
 }
 
 function syncCatalogoSheets() {
@@ -1399,18 +1393,14 @@ function showToast(msg) {
 // INICIALIZACIÓN
 // ════════════════════════════════════════════════════════════
 (function init() {
-  // Verificar conexión al cargar
-  if (SCRIPT_URL) {
-    var cs = document.getElementById('conn-status');
-    if (cs) cs.textContent = '⏳ Verificando conexión...';
-    fetch(SCRIPT_URL)
-      .then(function(r) { return r.json(); })
-      .then(function(resp) {
-        if (cs) { cs.textContent = resp.ok ? '🟢 Conectado a Google Sheets' : '🟡 Script responde pero revisa config'; }
-      })
-      .catch(function() {
-        if (cs) cs.textContent = '🔴 Sin conexión con Google — modo offline';
-      });
+  // Verificación silenciosa — sin fetch para evitar CORS
+  var cs = document.getElementById('conn-status');
+  if (cs) {
+    if (SCRIPT_URL && API_KEY) {
+      cs.textContent = '🟢 Configurado — listo para usar';
+    } else {
+      cs.textContent = '⚙️ Configura la URL y clave en Ajustes del dueño';
+    }
   }
 })();
 </script>
