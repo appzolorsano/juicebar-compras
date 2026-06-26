@@ -551,10 +551,12 @@ function apiCall(data, onSuccess, onError) {
   }
   data.api_key = API_KEY;
   showLoading('Conectando con Google...');
+  // Apps Script requiere enviar como form data para evitar CORS preflight
+  var formData = new FormData();
+  formData.append('payload', JSON.stringify(data));
   fetch(SCRIPT_URL, {
     method: 'POST',
-    body: JSON.stringify(data),
-    headers: {'Content-Type': 'application/json'}
+    body: formData
   })
   .then(function(r) { return r.json(); })
   .then(function(resp) {
