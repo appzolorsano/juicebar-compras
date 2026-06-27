@@ -901,7 +901,7 @@ function renderQty() {
 }
 
 function enviarLista() {
-  var keys = Object.keys(sel);
+  var keys = Object.keys(sel).sort(function(a,b){ return a.localeCompare(b,'es'); });
   if (!keys.length) { showToast('Selecciona al menos un insumo'); return; }
   var nombre = document.getElementById('c-nombre').value || 'Lista del día';
   var ls     = document.getElementById('c-lugar');
@@ -926,8 +926,8 @@ function enviarLista() {
   var rs = document.getElementById('env-res');
   if (rs) rs.textContent = keys.length + ' ítems para ' + lugar + (nota ? ' · "' + nota + '"' : '');
   var ri = document.getElementById('env-items');
-  if (ri) ri.innerHTML = keys.map(function(k) {
-    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px"><span>' + k + '</span><span style="color:var(--txt2)">' + sel[k].qty + ' ' + sel[k].unit + '</span></div>';
+  if (ri) ri.innerHTML = itemsArr.map(function(it) {
+    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px"><span>' + it.nombre + '</span><span style="color:var(--txt2)">' + it.qty + ' ' + it.unit + '</span></div>';
   }).join('');
 
   // Limpiar selección
