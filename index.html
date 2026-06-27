@@ -443,23 +443,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
     <div style="flex:1"><div class="topbar-title">Configuración</div><div class="topbar-sub">Solo visible para el Admin</div></div>
   </div>
   <div class="scroll-body">
-    <!-- URL Apps Script -->
-    <div class="card" style="border:2px solid var(--g)">
+    <!-- Conexión Google — configurada automáticamente -->
+    <div class="card" style="border:1px solid var(--g)">
       <div class="card-title">🔗 Conexión con Google</div>
-      <div class="field"><div class="field-label">Clave secreta (API Key)</div><input class="field-input" id="cfg-apikey" placeholder="La misma clave que pusiste en Code.gs" type="password"></div>
-      <div class="field"><div class="field-label">URL de tu Apps Script (Web App)</div><input class="field-input" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-      <button class="btn btn-primary" onclick="guardarURL()" style="margin-top:4px">Guardar y probar conexión</button>
-      <div id="conn-result" style="font-size:12px;margin-top:6px;color:var(--txt2)"></div>
+      <div style="background:var(--gl);border-radius:8px;padding:12px;font-size:13px;color:var(--gd)">
+        ✅ Conectado automáticamente a Google Sheets y Gmail.<br>
+        <span style="font-size:12px;color:var(--txt2);margin-top:4px;display:block">La configuración está integrada en la app.</span>
+      </div>
     </div>
 
     <!-- PIN Admin -->
     <div class="card">
-      <div class="card-title">🔒 Cambiar PIN del Admin</div>
+      <div class="card-title">🔒 Cambiar clave del Admin</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="field"><div class="field-label">PIN actual</div><input class="field-input" id="pin-actual" type="password" maxlength="4" placeholder="****"></div>
-        <div class="field"><div class="field-label">PIN nuevo</div><input class="field-input" id="pin-nuevo" type="password" maxlength="4" placeholder="****"></div>
+        <div class="field"><div class="field-label">Clave actual</div><input class="field-input" id="pin-actual" type="password" placeholder="Clave actual"></div>
+        <div class="field"><div class="field-label">Clave nueva</div><input class="field-input" id="pin-nuevo" type="password" placeholder="Nueva clave (mín. 8 caracteres)"></div>
       </div>
-      <button class="btn btn-secondary" onclick="cambiarPIN()" style="margin-top:4px">Cambiar PIN Admin</button>
+      <button class="btn btn-secondary" onclick="cambiarPIN()" style="margin-top:4px">Cambiar clave del Admin</button>
     </div>
 
     <!-- Clave Asistente -->
@@ -534,11 +534,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 // ════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════
-var OWNER_PIN  = localStorage.getItem('jb_pin') || '1234';
-var ASST_PIN   = localStorage.getItem('jb_asst_pin') || '1234';
-var SCRIPT_URL = localStorage.getItem('jb_script_url') || '';
+var OWNER_PIN  = localStorage.getItem('jb_pin') || 'JuiceBar#2026';
+var ASST_PIN   = localStorage.getItem('jb_asst_pin') || 'Uredesa#2026';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTn4NQup3mk-rg8Pw-7SoTTE1jCFWzIt1k07Le4aAl07_Gi9YRmgOGQnIRn7nUNP1F/exec';
 var asstNombre = '';
-var API_KEY    = localStorage.getItem('jb_api_key') || '';
+var API_KEY    = 'Luis#1955';
 
 // ════════════════════════════════════════════════════════════
 // DATOS LOCALES (se sincronizan con Sheets)
@@ -691,7 +691,7 @@ function loginAsistente() {
   var clave  = document.getElementById('asst-clave').value;
   var errEl  = document.getElementById('asst-error');
   if (!nombre) { if(errEl) errEl.textContent = 'El nombre es obligatorio.'; return; }
-  if (clave !== ASST_PIN) { if(errEl) errEl.textContent = 'Clave incorrecta.'; return; }
+  if (clave !== ASST_PIN) { if(errEl) errEl.textContent = 'Clave incorrecta. Contacta al Admin.'; return; }
   asstNombre = nombre;
   if(errEl) errEl.textContent = '';
   document.getElementById('asst-clave').value = '';
@@ -789,10 +789,7 @@ function checkPin() {
     var el = document.getElementById('d-owner-fecha');
     if (el) el.textContent = d;
     // Cargar URL guardada en campo config
-    var cfgEl = document.getElementById('cfg-url');
-    var cfgKey = document.getElementById('cfg-apikey');
-    if (cfgKey && API_KEY) cfgKey.value = '●●●●●●●●';
-    if (cfgEl && SCRIPT_URL) cfgEl.value = SCRIPT_URL;
+
     cargarListaActiva();
     go('p-o-home');
   } else {
@@ -806,25 +803,37 @@ function cambiarPINAsistente() {
   var actual = document.getElementById('asst-pin-actual').value;
   var nuevo  = document.getElementById('asst-pin-nuevo').value;
   var el     = document.getElementById('asst-pin-result');
-  if (actual !== ASST_PIN) { if(el) { el.textContent = 'Clave actual incorrecta'; el.style.color='var(--rd)'; } return; }
-  if (!nuevo || nuevo.length < 4) { if(el) { el.textContent = 'La clave debe tener al menos 4 caracteres'; el.style.color='var(--rd)'; } return; }
+  if (actual !== ASST_PIN) { if(el) { el.textContent = '❌ Clave actual incorrecta'; el.style.color='var(--rd)'; } return; }
+  var error = validarClave(nuevo);
+  if (error) { if(el) { el.textContent = '❌ ' + error; el.style.color='var(--rd)'; } return; }
+  if (nuevo === OWNER_PIN) { if(el) { el.textContent = '❌ La clave del Asistente no puede ser igual a la del Admin'; el.style.color='var(--rd)'; } return; }
   ASST_PIN = nuevo;
   localStorage.setItem('jb_asst_pin', nuevo);
   document.getElementById('asst-pin-actual').value = '';
   document.getElementById('asst-pin-nuevo').value  = '';
-  if(el) { el.textContent = '✅ Clave del asistente actualizada'; el.style.color='var(--g)'; }
+  if(el) { el.textContent = '✅ Clave del Asistente actualizada'; el.style.color='var(--g)'; }
+}
+
+function validarClave(clave) {
+  if (clave.length < 8) return 'Mínimo 8 caracteres';
+  if (!/[A-Za-z]/.test(clave)) return 'Debe tener al menos una letra';
+  if (!/[0-9]/.test(clave)) return 'Debe tener al menos un número';
+  if (!/[^A-Za-z0-9]/.test(clave)) return 'Debe tener al menos un carácter especial (#, @, !, etc.)';
+  return null;
 }
 
 function cambiarPIN() {
   var actual = document.getElementById('pin-actual').value;
   var nuevo  = document.getElementById('pin-nuevo').value;
-  if (actual !== OWNER_PIN) { showToast('PIN actual incorrecto'); return; }
-  if (nuevo.length !== 4 || !/^\d{4}$/.test(nuevo)) { showToast('El PIN nuevo debe tener exactamente 4 dígitos'); return; }
+  if (actual !== OWNER_PIN) { showToast('❌ Clave actual incorrecta'); return; }
+  var error = validarClave(nuevo);
+  if (error) { showToast('❌ ' + error); return; }
+  if (nuevo === ASST_PIN) { showToast('❌ La clave del Admin no puede ser igual a la del Asistente'); return; }
   OWNER_PIN = nuevo;
   localStorage.setItem('jb_pin', nuevo);
   document.getElementById('pin-actual').value = '';
   document.getElementById('pin-nuevo').value = '';
-  showToast('✅ PIN actualizado');
+  showToast('✅ Clave del Admin actualizada');
 }
 
 // ════════════════════════════════════════════════════════════
