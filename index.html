@@ -531,8 +531,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 var OWNER_PIN  = localStorage.getItem('jb_pin') || 'JuiceBar#2026';
 var ASST_PIN   = localStorage.getItem('jb_asst_pin') || 'Uredesa#2026';
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTn4NQup3mk-rg8Pw-7SoTTE1jCFWzIt1k07Le4aAl07_Gi9YRmgOGQnIRn7nUNP1F/exec';
-var asstNombre = '';
+var asstNombre = localStorage.getItem('jb_asst_nombre') || '';
 var API_KEY    = 'Luis#1955';
+var SESSION    = localStorage.getItem('jb_session') || '';
 
 // ════════════════════════════════════════════════════════════
 // DATOS LOCALES (se sincronizan con Sheets)
@@ -675,6 +676,13 @@ function go(id) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   var el = document.getElementById(id);
   if (el) el.classList.add('active');
+  // Limpiar sesión al ir a login
+  if (id === 'p-login') {
+    SESSION = '';
+    localStorage.removeItem('jb_session');
+    localStorage.removeItem('jb_asst_nombre');
+    asstNombre = '';
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -687,6 +695,9 @@ function loginAsistente() {
   if (!nombre) { if(errEl) errEl.textContent = 'El nombre es obligatorio.'; return; }
   if (clave !== ASST_PIN) { if(errEl) errEl.textContent = 'Clave incorrecta. Contacta al Admin.'; return; }
   asstNombre = nombre;
+  SESSION = 'asst';
+  localStorage.setItem('jb_session', 'asst');
+  localStorage.setItem('jb_asst_nombre', nombre);
   if(errEl) errEl.textContent = '';
   document.getElementById('asst-clave').value = '';
   renderLugarSel();
@@ -787,6 +798,8 @@ function checkPin() {
     var d = new Date().toLocaleDateString('es-EC', {weekday:'long', day:'numeric', month:'long'});
     var el = document.getElementById('d-owner-fecha');
     if (el) el.textContent = d;
+    SESSION = 'admin';
+    localStorage.setItem('jb_session', 'admin');
     cargarListaActiva();
     go('p-o-home');
   } else {
@@ -1524,15 +1537,32 @@ function showToast(msg) {
 // INICIALIZACIÓN
 // ════════════════════════════════════════════════════════════
 (function init() {
-  // Verificación silenciosa — sin fetch para evitar CORS
-  var cs = document.getElementById('conn-status');
-  if (cs) {
-    if (SCRIPT_URL && API_KEY) {
-      cs.textContent = '🟢 Configurado — listo para usar';
-    } else {
-      cs.textContent = '⚙️ Configura la URL y clave del Admin en ⚙️ Configuración';
-    }
+  // Restaurar sesión si existe
+  if (SESSION === 'admin') {
+    var d = new Date().toLocaleDateString('es-EC', {weekday:'long', day:'numeric', month:'long'});
+    var el = document.getElementById('d-owner-fecha');
+    if (el) el.textContent = d;
+    cargarListaActiva();
+    go('p-o-home');
+    return;
   }
+  if (SESSION === 'asst') {
+    renderLugarSel();
+    renderACatTabs();
+    renderAChips();
+    var ahora = new Date();
+    var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var fechaNombre = 'Mercado — ' + ahora.getDate() + ' ' + meses[ahora.getMonth()] + ' ' + ahora.getFullYear();
+    var cnEl = document.getElementById('c-nombre');
+    if (cnEl) cnEl.value = fechaNombre;
+    go('p-a-crear');
+    var tn = document.getElementById('asst-topbar-nombre');
+    if (tn && asstNombre) tn.textContent = 'Hola, ' + asstNombre + ' — selecciona los insumos que faltan';
+    return;
+  }
+  // Sin sesión — mostrar login
+  var cs = document.getElementById('conn-status');
+  if (cs) cs.textContent = '';
 })();
 </script>
 </body>
