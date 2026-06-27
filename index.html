@@ -534,11 +534,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 // ════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════
-var OWNER_PIN = localStorage.getItem('jb_pin') || '1234';
-var ASST_PIN  = localStorage.getItem('jb_asst_pin') || '1234';
+var OWNER_PIN  = localStorage.getItem('jb_pin') || '1234';
+var ASST_PIN   = localStorage.getItem('jb_asst_pin') || '1234';
 var SCRIPT_URL = localStorage.getItem('jb_script_url') || '';
 var asstNombre = '';
-var API_KEY = localStorage.getItem('jb_api_key') || '';
+var API_KEY    = localStorage.getItem('jb_api_key') || '';
 
 // ════════════════════════════════════════════════════════════
 // DATOS LOCALES (se sincronizan con Sheets)
@@ -744,6 +744,45 @@ function renderPinDots() {
   }
 }
 
+function cargarListaActiva() {
+  // Cargar lista pendiente del dia desde Sheets
+  if (!SCRIPT_URL || !API_KEY) {
+    renderOHome();
+    return;
+  }
+  showLoading('Cargando lista del dia...');
+  var data = { accion: 'get_lista_activa', api_key: API_KEY };
+  var url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
+
+  // Usar iframe para GET con respuesta legible
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.onload = function() {
+    hideLoading();
+    try {
+      var resp = JSON.parse(xhr.responseText);
+      if (resp.ok && resp.lista) {
+        // Cargar lista desde Sheets
+        lista = resp.lista;
+        gastado = 0;
+        // Calcular lo ya gastado
+        Object.keys(lista.items).forEach(function(k) {
+          if (lista.items[k].done) gastado += (lista.items[k].precio || 0);
+        });
+        showToast('Lista cargada desde Sheets');
+      }
+    } catch(e) {
+      // No se pudo parsear — continuar sin lista
+    }
+    renderOHome();
+  };
+  xhr.onerror = function() {
+    hideLoading();
+    renderOHome();
+  };
+  xhr.send();
+}
+
 function checkPin() {
   if (pinBuf === OWNER_PIN) {
     var d = new Date().toLocaleDateString('es-EC', {weekday:'long', day:'numeric', month:'long'});
@@ -754,7 +793,7 @@ function checkPin() {
     var cfgKey = document.getElementById('cfg-apikey');
     if (cfgKey && API_KEY) cfgKey.value = '●●●●●●●●';
     if (cfgEl && SCRIPT_URL) cfgEl.value = SCRIPT_URL;
-    renderOHome();
+    cargarListaActiva();
     go('p-o-home');
   } else {
     for (var i = 0; i < 4; i++) document.getElementById('d' + i).classList.add('err');
