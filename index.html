@@ -201,11 +201,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
       </div>
       <div class="role-card on" id="r-owner" onclick="pickRole('owner')">
         <div class="role-icon">🛒</div>
-        <div class="role-name">Dueño</div>
-        <div class="role-desc">Sale a comprar</div>
+        <div class="role-name">Admin</div>
+        <div class="role-desc">Gestiona y compra</div>
       </div>
     </div>
-    <div class="hint-box" id="role-hint">El dueño necesita PIN. Ve todo: lista, gastos y estadísticas.</div>
+    <div class="hint-box" id="role-hint">El Admin necesita PIN. Ve todo: lista, gastos y estadísticas.</div>
     <button class="btn btn-primary" onclick="loginClick()">Entrar</button>
 
     <!-- Estado conexión -->
@@ -218,7 +218,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px">
     <div style="text-align:center;margin-bottom:6px">
       <div style="font-size:30px;margin-bottom:10px">🔒</div>
-      <div style="font-size:17px;font-weight:600">PIN del dueño</div>
+      <div style="font-size:17px;font-weight:600">PIN del Admin</div>
       <div style="font-size:13px;color:var(--txt2);margin-top:4px">Acceso protegido</div>
     </div>
     <div class="pin-dots">
@@ -243,12 +243,37 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
   </div>
 </div>
 
+<!-- ═══════════ ASISTENTE: LOGIN ═══════════ -->
+<div class="screen" id="p-a-login">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px">
+      <div class="lm" style="width:36px;height:36px;font-size:15px">JB</div>
+      <div>
+        <div style="font-size:20px;font-weight:700">Juice Bar</div>
+        <div style="font-size:12px;color:var(--txt2)">Acceso Asistente</div>
+      </div>
+    </div>
+    <div class="hint-box" style="margin-bottom:20px">Ingresa tu nombre y la clave para continuar.</div>
+    <div class="field">
+      <div class="field-label">Tu nombre *</div>
+      <input class="field-input" id="asst-nombre" placeholder="ej: María" maxlength="40">
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <div class="field-label">Clave de acceso *</div>
+      <input class="field-input" id="asst-clave" type="password" placeholder="Clave del asistente">
+    </div>
+    <div id="asst-error" style="color:var(--rd);font-size:13px;margin-bottom:10px;min-height:18px"></div>
+    <button class="btn btn-primary" onclick="loginAsistente()">Ingresar</button>
+    <button class="btn btn-secondary" onclick="go('p-login')">Volver</button>
+  </div>
+</div>
+
 <!-- ═══════════ ASISTENTE: CREAR LISTA ═══════════ -->
 <div class="screen" id="p-a-crear">
   <div class="topbar">
     <div class="lm">JB</div>
-    <div style="flex:1"><div class="topbar-title">Nueva lista</div><div class="topbar-sub">Toca los insumos que faltan</div></div>
-    <button class="sm-btn sm-outline" style="font-size:12px" onclick="go('p-login')">Salir</button>
+    <div style="flex:1"><div class="topbar-title">Nueva lista</div><div class="topbar-sub" id="asst-topbar-nombre">Toca los insumos que faltan</div></div>
+    <button class="sm-btn sm-outline" style="font-size:12px" onclick="go('p-a-login')">Salir</button>
   </div>
   <div class="scroll-body">
     <div class="card">
@@ -274,9 +299,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
       <div id="qty-box"><div class="empty">Toca insumos arriba para agregarlos</div></div>
     </div>
     <div class="card">
-      <div class="field"><div class="field-label">Nota para el dueño</div><input class="field-input" id="c-nota" placeholder="ej: el açaí está escaso hoy"></div>
+      <div class="field"><div class="field-label">Nota para el Admin</div><input class="field-input" id="c-nota" placeholder="ej: el açaí está escaso hoy"></div>
     </div>
-    <button class="btn btn-primary" id="btn-enviar" onclick="enviarLista()" disabled>Enviar lista al dueño</button>
+    <button class="btn btn-primary" id="btn-enviar" onclick="enviarLista()" disabled>Enviar lista al Admin</button>
   </div>
 </div>
 
@@ -286,7 +311,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
     <div style="font-size:52px;margin-bottom:14px">✅</div>
     <div style="font-size:20px;font-weight:700;color:var(--g);margin-bottom:8px">Lista enviada</div>
     <div style="font-size:13px;color:var(--txt2);margin-bottom:6px" id="env-res"></div>
-    <div style="font-size:12px;color:var(--txt3);margin-bottom:20px">El dueño recibió la notificación en Google Chat y los datos quedaron guardados en Sheets.</div>
+    <div style="font-size:12px;color:var(--txt3);margin-bottom:20px">El Admin recibió la notificación y los datos quedaron guardados en Google Sheets.</div>
     <div class="card" style="text-align:left;margin-bottom:16px" id="env-items"></div>
     <button class="btn btn-primary" onclick="go('p-a-crear')">Crear otra lista</button>
     <button class="btn btn-secondary" onclick="go('p-login')">Salir</button>
@@ -297,7 +322,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 <div class="screen" id="p-o-home">
   <div class="topbar">
     <div class="lm">JB</div>
-    <div style="flex:1"><div class="topbar-title">Hola, dueño</div><div class="topbar-sub" id="d-owner-fecha"></div></div>
+    <div style="flex:1"><div class="topbar-title">Hola, Admin</div><div class="topbar-sub" id="d-owner-fecha"></div></div>
     <button class="sm-btn sm-outline" style="font-size:12px" onclick="go('p-login')">Salir</button>
   </div>
   <div class="scroll-body">
@@ -321,7 +346,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
   </div>
 </div>
 
-<!-- ═══════════ DUEÑO: LISTA ═══════════ -->
+<!-- ═══════════ ADMIN: LISTA ═══════════ -->
 <div class="screen" id="p-o-lista">
   <div class="topbar">
     <button class="back-btn" onclick="go('p-o-home')">←</button>
@@ -415,7 +440,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 <div class="screen" id="p-o-cfg">
   <div class="topbar">
     <button class="back-btn" onclick="go('p-o-home')">←</button>
-    <div style="flex:1"><div class="topbar-title">Configuración</div><div class="topbar-sub">Solo visible para el dueño</div></div>
+    <div style="flex:1"><div class="topbar-title">Configuración</div><div class="topbar-sub">Solo visible para el Admin</div></div>
   </div>
   <div class="scroll-body">
     <!-- URL Apps Script -->
@@ -427,14 +452,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
       <div id="conn-result" style="font-size:12px;margin-top:6px;color:var(--txt2)"></div>
     </div>
 
-    <!-- PIN -->
+    <!-- PIN Admin -->
     <div class="card">
-      <div class="card-title">🔒 Cambiar PIN</div>
+      <div class="card-title">🔒 Cambiar PIN del Admin</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="field"><div class="field-label">PIN actual</div><input class="field-input" id="pin-actual" type="password" maxlength="4" placeholder="****"></div>
         <div class="field"><div class="field-label">PIN nuevo</div><input class="field-input" id="pin-nuevo" type="password" maxlength="4" placeholder="****"></div>
       </div>
-      <button class="btn btn-secondary" onclick="cambiarPIN()" style="margin-top:4px">Cambiar PIN</button>
+      <button class="btn btn-secondary" onclick="cambiarPIN()" style="margin-top:4px">Cambiar PIN Admin</button>
+    </div>
+
+    <!-- Clave Asistente -->
+    <div class="card">
+      <div class="card-title">🧑‍💼 Clave del Asistente</div>
+      <div class="hint-box" style="margin-bottom:10px">Todos los asistentes usan la misma clave para ingresar.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field"><div class="field-label">Clave actual</div><input class="field-input" id="asst-pin-actual" type="password" placeholder="Clave actual"></div>
+        <div class="field"><div class="field-label">Clave nueva</div><input class="field-input" id="asst-pin-nuevo" type="password" placeholder="Clave nueva"></div>
+      </div>
+      <button class="btn btn-secondary" onclick="cambiarPINAsistente()" style="margin-top:4px">Cambiar clave del asistente</button>
+      <div id="asst-pin-result" style="font-size:12px;margin-top:6px;min-height:16px"></div>
     </div>
 
     <!-- Categorías -->
@@ -498,7 +535,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 // CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════
 var OWNER_PIN = localStorage.getItem('jb_pin') || '1234';
+var ASST_PIN  = localStorage.getItem('jb_asst_pin') || '1234';
 var SCRIPT_URL = localStorage.getItem('jb_script_url') || '';
+var asstNombre = '';
 var API_KEY = localStorage.getItem('jb_api_key') || '';
 
 // ════════════════════════════════════════════════════════════
@@ -647,22 +686,35 @@ function go(id) {
 // ════════════════════════════════════════════════════════════
 // LOGIN / PIN
 // ════════════════════════════════════════════════════════════
+function loginAsistente() {
+  var nombre = document.getElementById('asst-nombre').value.trim();
+  var clave  = document.getElementById('asst-clave').value;
+  var errEl  = document.getElementById('asst-error');
+  if (!nombre) { if(errEl) errEl.textContent = 'El nombre es obligatorio.'; return; }
+  if (clave !== ASST_PIN) { if(errEl) errEl.textContent = 'Clave incorrecta.'; return; }
+  asstNombre = nombre;
+  if(errEl) errEl.textContent = '';
+  document.getElementById('asst-clave').value = '';
+  renderLugarSel();
+  renderACatTabs();
+  renderAChips();
+  go('p-a-crear');
+  var tn = document.getElementById('asst-topbar-nombre');
+  if (tn && asstNombre) tn.textContent = 'Hola, ' + asstNombre + ' — selecciona los insumos que faltan';
+}
+
 function pickRole(r) {
   role = r;
   document.getElementById('r-owner').classList.toggle('on', r === 'owner');
   document.getElementById('r-asst').classList.toggle('on', r === 'asst');
   document.getElementById('role-hint').textContent = r === 'owner'
-    ? 'El dueño necesita PIN. Ve todo: lista, gastos y estadísticas.'
-    : 'El asistente solo crea listas. No accede a precios ni reportes.';
+    ? 'El Admin necesita PIN. Ve todo: lista, gastos y estadísticas.'
+    : 'El asistente necesita clave. Solo crea listas, no accede a precios ni reportes.';
 }
 
 function loginClick() {
   if (role === 'owner') { go('p-pin'); }
-  else {
-    renderLugarSel();
-    renderACatTabs();
-    renderAChips();
-    go('p-a-crear');
+  else { go('p-a-login'); }
   }
 }
 
@@ -704,6 +756,19 @@ function checkPin() {
     document.getElementById('pin-err').textContent = 'PIN incorrecto. Inténtalo de nuevo.';
     setTimeout(function() { pinBuf = ''; renderPinDots(); }, 1100);
   }
+}
+
+function cambiarPINAsistente() {
+  var actual = document.getElementById('asst-pin-actual').value;
+  var nuevo  = document.getElementById('asst-pin-nuevo').value;
+  var el     = document.getElementById('asst-pin-result');
+  if (actual !== ASST_PIN) { if(el) { el.textContent = 'Clave actual incorrecta'; el.style.color='var(--rd)'; } return; }
+  if (!nuevo || nuevo.length < 4) { if(el) { el.textContent = 'La clave debe tener al menos 4 caracteres'; el.style.color='var(--rd)'; } return; }
+  ASST_PIN = nuevo;
+  localStorage.setItem('jb_asst_pin', nuevo);
+  document.getElementById('asst-pin-actual').value = '';
+  document.getElementById('asst-pin-nuevo').value  = '';
+  if(el) { el.textContent = '✅ Clave del asistente actualizada'; el.style.color='var(--g)'; }
 }
 
 function cambiarPIN() {
@@ -864,7 +929,7 @@ function enviarLista() {
 
   // Enviar a Apps Script
   apiCall(
-    { accion: 'crear_lista', nombre: nombre, lugar: lugar, nota: nota, items: itemsArr },
+    { accion: 'crear_lista', nombre: nombre, lugar: lugar, nota: nota, items: itemsArr, asistente: asstNombre },
     function(resp) {
       lista.id = resp.lista_id || lista.id;
       showToast('✅ Lista enviada a Google');
@@ -1399,7 +1464,7 @@ function showToast(msg) {
     if (SCRIPT_URL && API_KEY) {
       cs.textContent = '🟢 Configurado — listo para usar';
     } else {
-      cs.textContent = '⚙️ Configura la URL y clave en Ajustes del dueño';
+      cs.textContent = '⚙️ Configura la URL y clave del Admin en ⚙️ Configuración';
     }
   }
 })();
