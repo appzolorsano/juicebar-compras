@@ -277,7 +277,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
   </div>
   <div class="scroll-body">
     <div class="card">
-      <div class="field"><div class="field-label">Nombre de la lista</div><input class="field-input" id="c-nombre" value="Mercado — hoy"></div>
+      <div class="field"><div class="field-label">Nombre de la lista</div><input class="field-input" id="c-nombre"></div>
       <div class="field"><div class="field-label">Lugar de compra</div><select class="field-select" id="c-lugar"></select></div>
     </div>
     <div class="section-title">Categoría</div>
@@ -698,6 +698,12 @@ function loginAsistente() {
   renderLugarSel();
   renderACatTabs();
   renderAChips();
+  // Poner fecha actual en el nombre de la lista
+  var ahora = new Date();
+  var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var fechaNombre = 'Mercado — ' + ahora.getDate() + ' ' + meses[ahora.getMonth()] + ' ' + ahora.getFullYear();
+  var cnEl = document.getElementById('c-nombre');
+  if (cnEl) cnEl.value = fechaNombre;
   go('p-a-crear');
   var tn = document.getElementById('asst-topbar-nombre');
   if (tn && asstNombre) tn.textContent = 'Hola, ' + asstNombre + ' — selecciona los insumos que faltan';
@@ -816,6 +822,8 @@ function renderAChips() {
   if (!box) return;
   box.innerHTML = '';
   var items = (biblioteca[curACat] || []).filter(function(i) { return i.on; });
+  // Ordenar alfabéticamente
+  items.sort(function(a, b) { return a.n.localeCompare(b.n, 'es'); });
   if (!items.length) {
     box.innerHTML = '<div class="empty">No hay insumos activos en esta categoría.</div>';
     return;
