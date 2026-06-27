@@ -223,7 +223,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
     </div>
     <div class="field">
       <div class="field-label">Clave del Admin</div>
-      <input class="field-input" id="pin-input" type="password" placeholder="Ingresa tu clave" onkeydown="if(event.key==='Enter')checkPin()">
+      <div style="position:relative">
+        <input class="field-input" id="pin-input" type="password" placeholder="Ingresa tu clave" onkeydown="if(event.key==='Enter')checkPin()" style="padding-right:48px">
+        <button onclick="toggleVer('pin-input','ojo-pin')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;font-size:18px;color:var(--txt2)" id="ojo-pin">👁</button>
+      </div>
     </div>
     <div class="pin-error" id="pin-err" style="margin-bottom:12px"></div>
     <button class="btn btn-primary" onclick="checkPin()" style="margin-bottom:8px">Entrar</button>
@@ -248,7 +251,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
     </div>
     <div class="field" style="margin-bottom:20px">
       <div class="field-label">Clave de acceso *</div>
-      <input class="field-input" id="asst-clave" type="password" placeholder="Clave del asistente">
+      <div style="position:relative">
+        <input class="field-input" id="asst-clave" type="password" placeholder="Clave del asistente" style="padding-right:48px">
+        <button onclick="toggleVer('asst-clave','ojo-asst')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;font-size:18px;color:var(--txt2)" id="ojo-asst">👁</button>
+      </div>
     </div>
     <div id="asst-error" style="color:var(--rd);font-size:13px;margin-bottom:10px;min-height:18px"></div>
     <button class="btn btn-primary" onclick="loginAsistente()">Ingresar</button>
@@ -802,6 +808,19 @@ function cambiarPINAsistente() {
   document.getElementById('asst-pin-actual').value = '';
   document.getElementById('asst-pin-nuevo').value  = '';
   if(el) { el.textContent = '✅ Clave del Asistente actualizada'; el.style.color='var(--g)'; }
+}
+
+function toggleVer(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (btn) btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    if (btn) btn.textContent = '👁';
+  }
 }
 
 function validarClave(clave) {
