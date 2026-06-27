@@ -873,7 +873,7 @@ function agregarNuevo() {
 function renderQty() {
   var box = document.getElementById('qty-box');
   var ct  = document.getElementById('qty-ct');
-  var keys = Object.keys(sel);
+  var keys = Object.keys(sel).sort(function(a, b) { return a.localeCompare(b, 'es'); });
   if (ct) ct.textContent = 'Cantidades (' + keys.length + ' ítem' + (keys.length !== 1 ? 's' : '') + ')';
   if (!box) return;
   if (!keys.length) { box.innerHTML = '<div class="empty">Toca insumos arriba para agregarlos</div>'; return; }
@@ -911,6 +911,8 @@ function enviarLista() {
   var itemsArr = keys.map(function(k) {
     return { nombre: k, qty: sel[k].qty, unit: sel[k].unit, categoria: sel[k].categoria || '' };
   });
+  // Ordenar alfabéticamente antes de enviar
+  itemsArr.sort(function(a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
 
   // Crear lista local
   lista = { nombre: nombre, lugar: lugar, nota: nota, items: {} };
