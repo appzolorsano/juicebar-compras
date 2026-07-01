@@ -1497,33 +1497,74 @@ function renderCatsList() {
 function editarCategoria(idx) {
   var cat = categorias[idx];
   var EMOJIS = ['🥦','🧀','🫙','🍞','🍖','🌿','🧃','❄️','🌾','🐟','🥚','🧂','🫒','🥩'];
-  var emojiOpts = EMOJIS.map(function(e) { return '<option value="'+e+'"'+(e===cat.emoji?' selected':'')+'>'+e+'</option>'; }).join('');
+
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
-  var modalId = 'modal_cat_' + idx;
-  modal.id = modalId;
-  modal.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px">'
-    + '<div style="font-size:16px;font-weight:600;margin-bottom:14px">Editar categoría</div>'
-    + '<div class="field"><div class="field-label">Nombre</div><input class="field-input" id="edit-cat-nombre" value="'+cat.nombre+'"></div>'
-    + '<div class="field"><div class="field-label">Emoji</div><select class="field-select" id="edit-cat-emoji">'+emojiOpts+'</select></div>'
-    + '<div style="display:flex;gap:8px;margin-top:12px">'
-    + '<button class="btn btn-primary" style="margin:0" onclick="guardarCatEdit('+idx+',\''+modalId+'\')">Guardar</button>'
-    + '<button class="btn btn-secondary" style="margin:0" onclick="document.getElementById(\''+modalId+'\').remove()">Cancelar</button>'
-    + '</div></div>';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:14px';
+  title.textContent = 'Editar categoría';
+  box.appendChild(title);
+
+  // Nombre
+  var fNombre = document.createElement('div');
+  fNombre.className = 'field';
+  fNombre.innerHTML = '<div class="field-label">Nombre</div>';
+  var iNombre = document.createElement('input');
+  iNombre.className = 'field-input';
+  iNombre.value = cat.nombre;
+  fNombre.appendChild(iNombre);
+  box.appendChild(fNombre);
+
+  // Emoji
+  var fEmoji = document.createElement('div');
+  fEmoji.className = 'field';
+  fEmoji.innerHTML = '<div class="field-label">Emoji</div>';
+  var iEmoji = document.createElement('select');
+  iEmoji.className = 'field-select';
+  EMOJIS.forEach(function(e) {
+    var o = document.createElement('option');
+    o.value = e; o.textContent = e;
+    if (e === cat.emoji) o.selected = true;
+    iEmoji.appendChild(o);
+  });
+  fEmoji.appendChild(iEmoji);
+  box.appendChild(fEmoji);
+
+  // Botones
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+  var btnG = document.createElement('button');
+  btnG.className = 'btn btn-primary';
+  btnG.style.margin = '0';
+  btnG.textContent = 'Guardar';
+  btnG.onclick = function() {
+    var nombre = iNombre.value.trim();
+    if (!nombre) { showToast('El nombre no puede estar vacío'); return; }
+    categorias[idx].nombre = nombre;
+    categorias[idx].emoji  = iEmoji.value;
+    saveCats();
+    modal.remove();
+    renderCatsList(); renderCfg(); autoSync();
+    showToast('✅ Categoría actualizada');
+  };
+  var btnC = document.createElement('button');
+  btnC.className = 'btn btn-secondary';
+  btnC.style.margin = '0';
+  btnC.textContent = 'Cancelar';
+  btnC.onclick = function() { modal.remove(); };
+  btns.appendChild(btnG);
+  btns.appendChild(btnC);
+  box.appendChild(btns);
+
+  modal.appendChild(box);
   document.body.appendChild(modal);
 }
 
-function guardarCatEdit(idx, modalId) {
-  var nombre = document.getElementById('edit-cat-nombre').value.trim();
-  var emoji  = document.getElementById('edit-cat-emoji').value;
-  if (!nombre) { showToast('El nombre no puede estar vacio'); return; }
-  categorias[idx].nombre = nombre;
-  categorias[idx].emoji  = emoji;
-  saveCats();
-  if (modalEl) modalEl.remove();
-  renderCatsList(); renderCfg(); autoSyncCatalogo();
-  showToast('Categoria actualizada');
-}
+
 
 function agregarCategoria() {
   var nombre = document.getElementById('nc-nombre').value.trim();
@@ -1572,29 +1613,56 @@ function renderLugaresList() {
 
 function editarLugar(idx) {
   var lugar = lugares[idx];
+
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
-  var modalId2 = 'modal_lugar_' + idx;
-  modal.id = modalId2;
-  modal.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px">'
-    + '<div style="font-size:16px;font-weight:600;margin-bottom:14px">Editar lugar</div>'
-    + '<div class="field"><div class="field-label">Nombre</div><input class="field-input" id="edit-lugar-nombre" value="'+lugar.nombre+'"></div>'
-    + '<div style="display:flex;gap:8px;margin-top:12px">'
-    + '<button class="btn btn-primary" style="margin:0" onclick="guardarLugarEdit('+idx+',\''+modalId2+'\')">Guardar</button>'
-    + '<button class="btn btn-secondary" style="margin:0" onclick="document.getElementById(\''+modalId2+'\').remove()">Cancelar</button>'
-    + '</div></div>';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:14px';
+  title.textContent = 'Editar lugar';
+  box.appendChild(title);
+
+  var fNombre = document.createElement('div');
+  fNombre.className = 'field';
+  fNombre.innerHTML = '<div class="field-label">Nombre</div>';
+  var iNombre = document.createElement('input');
+  iNombre.className = 'field-input';
+  iNombre.value = lugar.nombre;
+  fNombre.appendChild(iNombre);
+  box.appendChild(fNombre);
+
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+  var btnG = document.createElement('button');
+  btnG.className = 'btn btn-primary';
+  btnG.style.margin = '0';
+  btnG.textContent = 'Guardar';
+  btnG.onclick = function() {
+    var nombre = iNombre.value.trim();
+    if (!nombre) { showToast('El nombre no puede estar vacío'); return; }
+    lugares[idx].nombre = nombre;
+    saveLugares();
+    modal.remove();
+    renderLugaresList(); renderCfg(); autoSync();
+    showToast('✅ Lugar actualizado');
+  };
+  var btnC = document.createElement('button');
+  btnC.className = 'btn btn-secondary';
+  btnC.style.margin = '0';
+  btnC.textContent = 'Cancelar';
+  btnC.onclick = function() { modal.remove(); };
+  btns.appendChild(btnG);
+  btns.appendChild(btnC);
+  box.appendChild(btns);
+
+  modal.appendChild(box);
   document.body.appendChild(modal);
 }
 
-function guardarLugarEdit(idx, modalId) {
-  var nombre = document.getElementById('edit-lugar-nombre').value.trim();
-  if (!nombre) { showToast('El nombre no puede estar vacio'); return; }
-  lugares[idx].nombre = nombre;
-  saveLugares();
-  if (modalEl) modalEl.remove();
-  renderLugaresList(); renderCfg();
-  showToast('Lugar actualizado');
-}
+
 
 function agregarLugar() {
   var nombre = document.getElementById('nl-nombre').value.trim();
