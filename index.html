@@ -475,7 +475,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
         <span id="arr-sc" style="color:var(--txt2);font-size:18px">›</span>
       </div>
       <div id="sc" class="section-body">
-        <div class="hint-box">Con insumos: 🔒 no se puede borrar ni editar. Primero mueve sus insumos desde la biblioteca.</div>
+        
         <div id="cats-list"></div>
         <div style="display:flex;gap:7px;margin-top:10px">
           <input class="field-input" id="nc-nombre" placeholder="Nueva categoría" style="flex:1">
@@ -509,7 +509,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
       <div id="sbib" class="section-body">
         <div class="tabs" id="bib-tabs"></div>
         <div id="bib-list"></div>
-        <button class="btn btn-secondary" style="margin-top:8px" onclick="syncCatalogoSheets()">↑ Sincronizar catálogo con Sheets</button>
+        <button class="btn btn-primary" style="margin-top:8px;margin-bottom:6px" onclick="mostrarFormNuevoInsumo()">+ Agregar insumo</button>
+        <div id="nuevo-insumo-form" style="display:none;background:var(--gl);border-radius:10px;padding:12px;margin-bottom:8px;border:1px dashed var(--g)">
+          <div style="font-size:13px;font-weight:600;color:var(--gd);margin-bottom:10px">Nuevo insumo</div>
+          <div class="field"><div class="field-label">Nombre</div><input class="field-input" id="new-ins-nombre" placeholder="ej: Pitahaya"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="field"><div class="field-label">Unidad</div>
+              <select class="field-select" id="new-ins-unit">
+                <option>unidades</option><option>kg</option><option>lb</option>
+                <option>g</option><option>atados</option><option>fundas</option>
+                <option>cajas</option><option>litros</option>
+              </select>
+            </div>
+            <div class="field"><div class="field-label">Cantidad</div><input class="field-input" id="new-ins-qty" type="number" value="1" min="1"></div>
+          </div>
+          <div class="field"><div class="field-label">Categoría</div><select class="field-select" id="new-ins-cat"></select></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" style="margin:0" onclick="guardarNuevoInsumo()">Guardar</button>
+            <button class="btn btn-secondary" style="margin:0" onclick="document.getElementById('nuevo-insumo-form').style.display='none'">Cancelar</button>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:4px" onclick="syncCatalogoSheets()">↑ Sincronizar con Sheets</button>
       </div>
     </div>
 
@@ -649,6 +669,39 @@ function guardarURL() {
   if (el) { el.textContent = '✅ Guardado — prueba enviando una lista'; el.style.color = 'var(--g)'; }
 }
 
+function autoSync() {
+  // Sincronizar todo silenciosamente en background
+  if (!SCRIPT_URL || !API_KEY) return;
+  // Sync catálogo
+  submitForm({ accion: 'sync_catalogo', api_key: API_KEY, categorias: biblioteca });
+  // Sync config (categorías y lugares)
+  submitForm({ accion: 'sync_config', api_key: API_KEY, categorias: categorias, lugares: lugares });
+}
+
+function autoSyncCatalogo() { autoSync(); }
+
+function submitForm(data) {
+  var iframe = document.createElement('iframe');
+  iframe.name = 'sf_' + Date.now();
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = SCRIPT_URL;
+  form.target = iframe.name;
+  form.style.display = 'none';
+  var input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'payload';
+  input.value = JSON.stringify(data);
+  form.appendChild(input);
+  document.body.appendChild(form);
+  setTimeout(function() {
+    try { document.body.removeChild(iframe); document.body.removeChild(form); } catch(e) {}
+  }, 5000);
+  form.submit();
+}
+
 function syncCatalogoSheets() {
   apiCall({accion:'sync_catalogo', categorias: biblioteca},
     function() { showToast('✅ Catálogo sincronizado'); },
@@ -749,43 +802,76 @@ function renderPinDots() {
   }
 }
 
-function cargarListaActiva() {
-  // Cargar lista pendiente del dia desde Sheets
-  if (!SCRIPT_URL || !API_KEY) {
-    renderOHome();
-    return;
-  }
-  showLoading('Cargando lista del dia...');
-  var data = { accion: 'get_lista_activa', api_key: API_KEY };
-  var url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
+function cargarDesdeSheets(callback) {
+  if (!SCRIPT_URL || !API_KEY) { if (callback) callback(); return; }
+  showLoading('Sincronizando con Google...');
 
-  // Usar iframe para GET con respuesta legible
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', url, true);
-  xhr.onload = function() {
-    hideLoading();
+  // Paso 1: cargar config (categorías y lugares)
+  var urlCfg = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify({ accion: 'get_config', api_key: API_KEY }));
+  var xhrCfg = new XMLHttpRequest();
+  xhrCfg.open('GET', urlCfg, true);
+  xhrCfg.onload = function() {
     try {
-      var resp = JSON.parse(xhr.responseText);
-      if (resp.ok && resp.lista) {
-        // Cargar lista desde Sheets
-        lista = resp.lista;
-        gastado = 0;
-        // Calcular lo ya gastado
-        Object.keys(lista.items).forEach(function(k) {
-          if (lista.items[k].done) gastado += (lista.items[k].precio || 0);
-        });
-        showToast('Lista cargada desde Sheets');
+      var resp = JSON.parse(xhrCfg.responseText);
+      if (resp.ok && resp.categorias && resp.categorias.length > 0) {
+        categorias = resp.categorias;
+        saveCats();
       }
-    } catch(e) {
-      // No se pudo parsear — continuar sin lista
-    }
-    renderOHome();
+      if (resp.ok && resp.lugares && resp.lugares.length > 0) {
+        lugares = resp.lugares;
+        saveLugares();
+      }
+    } catch(e) {}
+
+    // Paso 2: cargar catálogo
+    var urlCat = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify({ accion: 'get_catalogo', api_key: API_KEY }));
+    var xhrCat = new XMLHttpRequest();
+    xhrCat.open('GET', urlCat, true);
+    xhrCat.onload = function() {
+      try {
+        var resp2 = JSON.parse(xhrCat.responseText);
+        if (resp2.ok && resp2.catalogo && Object.keys(resp2.catalogo).length > 0) {
+          // Merge con biblioteca existente
+          Object.keys(resp2.catalogo).forEach(function(cat) {
+            biblioteca[cat] = resp2.catalogo[cat];
+          });
+          saveBiblio();
+        }
+      } catch(e) {}
+
+      // Paso 3: cargar lista activa
+      var urlLista = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify({ accion: 'get_lista_activa', api_key: API_KEY }));
+      var xhrLista = new XMLHttpRequest();
+      xhrLista.open('GET', urlLista, true);
+      xhrLista.onload = function() {
+        hideLoading();
+        try {
+          var resp3 = JSON.parse(xhrLista.responseText);
+          if (resp3.ok && resp3.lista) {
+            lista = resp3.lista;
+            gastado = 0;
+            Object.keys(lista.items).forEach(function(k) {
+              if (lista.items[k].done) gastado += (lista.items[k].precio || 0);
+            });
+            showToast('Sincronizado con Google');
+          }
+        } catch(e) {}
+        if (callback) callback();
+      };
+      xhrLista.onerror = function() { hideLoading(); if (callback) callback(); };
+      xhrLista.send();
+    };
+    xhrCat.onerror = function() { hideLoading(); if (callback) callback(); };
+    xhrCat.send();
   };
-  xhr.onerror = function() {
-    hideLoading();
+  xhrCfg.onerror = function() { hideLoading(); if (callback) callback(); };
+  xhrCfg.send();
+}
+
+function cargarListaActiva() {
+  cargarDesdeSheets(function() {
     renderOHome();
-  };
-  xhr.send();
+  });
 }
 
 function checkPin() {
@@ -1366,37 +1452,77 @@ function renderCatsList() {
   if (!list) return;
   list.innerHTML = '';
   categorias.forEach(function(cat, idx) {
-    var tiene = (biblioteca[cat.id] || []).length > 0;
+    var nIns = (biblioteca[cat.id] || []).length;
     var div = document.createElement('div');
     div.className = 'list-row';
-    div.innerHTML = '<div style="font-size:20px;flex-shrink:0">' + cat.emoji + '</div>'
-      + '<div class="list-row-body"><div class="list-row-name">' + cat.nombre + '</div><div class="list-row-sub">' + (biblioteca[cat.id] || []).length + ' insumos</div></div>';
-    if (tiene) {
-      var lk = document.createElement('span');
-      lk.className = 'badge badge-gray';
-      lk.style.fontSize = '11px';
-      lk.textContent = '🔒';
-      div.appendChild(lk);
-    } else {
-      var tog = document.createElement('button');
-      tog.className = 'toggle' + (cat.on ? ' on' : '');
-      tog.innerHTML = '<div class="toggle-dot"></div>';
-      tog.onclick = function() { cat.on = !cat.on; saveCats(); renderCatsList(); };
-      div.appendChild(tog);
-      var del = document.createElement('button');
-      del.className = 'sm-btn sm-danger';
-      del.textContent = '🗑';
-      del.onclick = function() {
-        if (confirm('¿Borrar categoría "' + cat.nombre + '"?')) {
-          delete biblioteca[cat.id];
-          categorias.splice(idx, 1);
-          saveCats(); saveBiblio(); renderCfg();
-        }
-      };
-      div.appendChild(del);
-    }
+    div.style.flexWrap = 'wrap';
+    div.style.gap = '6px';
+    // Fila principal
+    var mainRow = document.createElement('div');
+    mainRow.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%';
+    mainRow.innerHTML = '<div style="font-size:20px;flex-shrink:0">' + cat.emoji + '</div>'
+      + '<div class="list-row-body"><div class="list-row-name">' + cat.nombre + '</div>'
+      + '<div class="list-row-sub">' + nIns + ' insumos</div></div>';
+    // Toggle
+    var tog = document.createElement('button');
+    tog.className = 'toggle' + (cat.on ? ' on' : '');
+    tog.innerHTML = '<div class="toggle-dot"></div>';
+    tog.onclick = function() { cat.on = !cat.on; saveCats(); renderCatsList(); autoSyncCatalogo(); };
+    mainRow.appendChild(tog);
+    // Editar
+    var edt = document.createElement('button');
+    edt.className = 'sm-btn sm-outline';
+    edt.textContent = '✏️';
+    edt.style.padding = '4px 8px';
+    edt.onclick = function() { editarCategoria(idx); };
+    mainRow.appendChild(edt);
+    // Borrar — solo si no tiene insumos
+    var del = document.createElement('button');
+    del.className = 'sm-btn sm-danger';
+    del.textContent = '🗑';
+    del.onclick = function() {
+      if (nIns > 0) { showToast('Mueve los insumos a otra categoría primero'); return; }
+      if (confirm('¿Borrar "' + cat.nombre + '"?')) {
+        delete biblioteca[cat.id];
+        categorias.splice(idx, 1);
+        saveCats(); saveBiblio(); renderCfg(); autoSyncCatalogo();
+      }
+    };
+    mainRow.appendChild(del);
+    div.appendChild(mainRow);
     list.appendChild(div);
   });
+}
+
+function editarCategoria(idx) {
+  var cat = categorias[idx];
+  var EMOJIS = ['🥦','🧀','🫙','🍞','🍖','🌿','🧃','❄️','🌾','🐟','🥚','🧂','🫒','🥩'];
+  var emojiOpts = EMOJIS.map(function(e) { return '<option value="'+e+'"'+(e===cat.emoji?' selected':'')+'>'+e+'</option>'; }).join('');
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
+  var modalId = 'modal_cat_' + idx;
+  modal.id = modalId;
+  modal.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px">'
+    + '<div style="font-size:16px;font-weight:600;margin-bottom:14px">Editar categoría</div>'
+    + '<div class="field"><div class="field-label">Nombre</div><input class="field-input" id="edit-cat-nombre" value="'+cat.nombre+'"></div>'
+    + '<div class="field"><div class="field-label">Emoji</div><select class="field-select" id="edit-cat-emoji">'+emojiOpts+'</select></div>'
+    + '<div style="display:flex;gap:8px;margin-top:12px">'
+    + '<button class="btn btn-primary" style="margin:0" onclick="guardarCatEdit('+idx+',\''+modalId+'\')">Guardar</button>'
+    + '<button class="btn btn-secondary" style="margin:0" onclick="document.getElementById(\''+modalId+'\').remove()">Cancelar</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+}
+
+function guardarCatEdit(idx, modalId) {
+  var nombre = document.getElementById('edit-cat-nombre').value.trim();
+  var emoji  = document.getElementById('edit-cat-emoji').value;
+  if (!nombre) { showToast('El nombre no puede estar vacio'); return; }
+  categorias[idx].nombre = nombre;
+  categorias[idx].emoji  = emoji;
+  saveCats();
+  if (modalEl) modalEl.remove();
+  renderCatsList(); renderCfg(); autoSyncCatalogo();
+  showToast('Categoria actualizada');
 }
 
 function agregarCategoria() {
@@ -1425,6 +1551,14 @@ function renderLugaresList() {
     tog.innerHTML = '<div class="toggle-dot"></div>';
     tog.onclick = function() { lugar.on = !lugar.on; saveLugares(); renderLugaresList(); };
     div.appendChild(tog);
+    // Editar
+    var edt = document.createElement('button');
+    edt.className = 'sm-btn sm-outline';
+    edt.textContent = '✏️';
+    edt.style.padding = '4px 8px';
+    edt.onclick = function() { editarLugar(idx); };
+    div.appendChild(edt);
+    // Borrar
     var del = document.createElement('button');
     del.className = 'sm-btn sm-danger';
     del.textContent = '🗑';
@@ -1434,6 +1568,32 @@ function renderLugaresList() {
     div.appendChild(del);
     list.appendChild(div);
   });
+}
+
+function editarLugar(idx) {
+  var lugar = lugares[idx];
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
+  var modalId2 = 'modal_lugar_' + idx;
+  modal.id = modalId2;
+  modal.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:340px">'
+    + '<div style="font-size:16px;font-weight:600;margin-bottom:14px">Editar lugar</div>'
+    + '<div class="field"><div class="field-label">Nombre</div><input class="field-input" id="edit-lugar-nombre" value="'+lugar.nombre+'"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:12px">'
+    + '<button class="btn btn-primary" style="margin:0" onclick="guardarLugarEdit('+idx+',\''+modalId2+'\')">Guardar</button>'
+    + '<button class="btn btn-secondary" style="margin:0" onclick="document.getElementById(\''+modalId2+'\').remove()">Cancelar</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+}
+
+function guardarLugarEdit(idx, modalId) {
+  var nombre = document.getElementById('edit-lugar-nombre').value.trim();
+  if (!nombre) { showToast('El nombre no puede estar vacio'); return; }
+  lugares[idx].nombre = nombre;
+  saveLugares();
+  if (modalEl) modalEl.remove();
+  renderLugaresList(); renderCfg();
+  showToast('Lugar actualizado');
 }
 
 function agregarLugar() {
@@ -1467,37 +1627,196 @@ function bibCat(btn) {
 function renderBib() {
   var list = document.getElementById('bib-list');
   if (!list) return;
-  var items = biblioteca[curBibCat] || [];
-  if (!items.length) { list.innerHTML = '<div class="empty">No hay insumos aquí.</div>'; return; }
+  var rawItems = biblioteca[curBibCat] || [];
+  var items = rawItems.slice().sort(function(a,b){ return a.n.localeCompare(b.n,'es'); });
+  if (!items.length) { list.innerHTML = '<div class="empty">No hay insumos aqui.</div>'; return; }
   list.innerHTML = '';
-  items.forEach(function(item, idx) {
+  items.forEach(function(item) {
+    var realIdx = rawItems.findIndex(function(i){ return i.n === item.n; });
     var div = document.createElement('div');
     div.className = 'list-row';
     div.style.opacity = item.on ? '1' : '0.5';
     var isSinCat = curBibCat === '_sincat';
-    div.innerHTML = '<div class="list-row-body"><div class="list-row-name" style="font-size:13px">' + item.n
+    div.innerHTML = '<div class="list-row-body">'
+      + '<div class="list-row-name" style="font-size:13px">' + item.n
       + (item.nuevo ? '<span class="badge badge-green" style="margin-left:5px;font-size:9px">Nuevo</span>' : '')
-      + '</div><div class="list-row-sub">' + item.u + ' · cant: ' + item.q + '</div>'
-      + (isSinCat ? '<select class="qty-select" style="font-size:12px;margin-top:4px" onchange="moverInsumo(\'' + item.n + '\',this.value)"><option value="">Asignar categoría...</option>'
-          + categorias.filter(function(c) { return c.on; }).map(function(c) { return '<option value="' + c.id + '">' + c.nombre + '</option>'; }).join('')
+      + '</div>'
+      + '<div class="list-row-sub">' + item.u + ' · cant: ' + item.q + '</div>'
+      + (isSinCat ? '<select class="qty-select" style="font-size:12px;margin-top:4px" onchange="moverInsumo(\'' + item.n + '\',this.value)"><option value="">Asignar categoria...</option>'
+          + categorias.map(function(c){ return '<option value="' + c.id + '">' + c.nombre + '</option>'; }).join('')
           + '</select>' : '')
       + '</div>';
     if (!isSinCat) {
       var tog = document.createElement('button');
       tog.className = 'toggle' + (item.on ? ' on' : '');
       tog.innerHTML = '<div class="toggle-dot"></div>';
-      tog.onclick = function() { item.on = !item.on; div.style.opacity = item.on ? '1' : '0.5'; tog.classList.toggle('on', item.on); saveBiblio(); };
+      tog.onclick = function() { item.on = !item.on; div.style.opacity = item.on ? '1' : '0.5'; tog.classList.toggle('on', item.on); saveBiblio(); autoSyncCatalogo(); };
       div.appendChild(tog);
     }
+    var edt = document.createElement('button');
+    edt.className = 'sm-btn sm-outline';
+    edt.textContent = '✏️';
+    edt.style.padding = '4px 8px';
+    edt.onclick = (function(cId, rIdx){ return function(){ editarInsumo(cId, rIdx); }; })(curBibCat, realIdx);
+    div.appendChild(edt);
     var del = document.createElement('button');
     del.className = 'sm-btn sm-danger';
     del.textContent = '🗑';
-    del.onclick = function() {
-      if (confirm('¿Borrar "' + item.n + '"?')) { biblioteca[curBibCat].splice(idx, 1); saveBiblio(); renderBib(); renderBibTabs(); }
-    };
+    del.onclick = (function(rIdx, nm){ return function(){
+      if (confirm('Borrar "' + nm + '"?')) {
+        biblioteca[curBibCat].splice(rIdx, 1);
+        saveBiblio(); renderBib(); renderBibTabs(); autoSyncCatalogo();
+      }
+    }; })(realIdx, item.n);
     div.appendChild(del);
     list.appendChild(div);
   });
+}
+
+function editarInsumo(catId, idx) {
+  var item = (biblioteca[catId] || [])[idx];
+  if (!item) return;
+  var UNITS = ['unidades','kg','lb','g','atados','fundas','cajas','litros'];
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:360px';
+
+  // Title
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:14px';
+  title.textContent = 'Editar insumo';
+  box.appendChild(title);
+
+  // Nombre
+  var fNombre = document.createElement('div');
+  fNombre.className = 'field';
+  fNombre.innerHTML = '<div class="field-label">Nombre</div>';
+  var iNombre = document.createElement('input');
+  iNombre.className = 'field-input';
+  iNombre.id = 'edit-ins-nombre';
+  iNombre.value = item.n;
+  fNombre.appendChild(iNombre);
+  box.appendChild(fNombre);
+
+  // Grid unidad + cantidad
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:8px';
+  var fUnit = document.createElement('div');
+  fUnit.className = 'field';
+  fUnit.innerHTML = '<div class="field-label">Unidad</div>';
+  var iUnit = document.createElement('select');
+  iUnit.className = 'field-select';
+  iUnit.id = 'edit-ins-unit';
+  UNITS.forEach(function(u) {
+    var o = document.createElement('option');
+    o.value = u; o.textContent = u;
+    if (u === item.u) o.selected = true;
+    iUnit.appendChild(o);
+  });
+  fUnit.appendChild(iUnit);
+  grid.appendChild(fUnit);
+
+  box.appendChild(grid);
+
+  // Categoria
+  var fCat = document.createElement('div');
+  fCat.className = 'field';
+  fCat.innerHTML = '<div class="field-label">Categoria</div>';
+  var iCat = document.createElement('select');
+  iCat.className = 'field-select';
+  iCat.id = 'edit-ins-cat';
+  categorias.forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c.id; o.textContent = c.emoji + ' ' + c.nombre;
+    if (c.id === catId) o.selected = true;
+    iCat.appendChild(o);
+  });
+  fCat.appendChild(iCat);
+  box.appendChild(fCat);
+
+  // Botones
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+  var btnG = document.createElement('button');
+  btnG.className = 'btn btn-primary';
+  btnG.style.margin = '0';
+  btnG.textContent = 'Guardar';
+  btnG.onclick = function() { guardarInsumoEdit(catId, idx, modal); };
+  var btnC = document.createElement('button');
+  btnC.className = 'btn btn-secondary';
+  btnC.style.margin = '0';
+  btnC.textContent = 'Cancelar';
+  btnC.onclick = function() { modal.remove(); };
+  btns.appendChild(btnG);
+  btns.appendChild(btnC);
+  box.appendChild(btns);
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
+
+function guardarInsumoEdit(catId, idx, modalEl) {
+  var nombre   = document.getElementById('edit-ins-nombre').value.trim();
+  var unit     = document.getElementById('edit-ins-unit').value;
+  var qty      = item.q; // Mantener cantidad original
+  var nuevaCat = document.getElementById('edit-ins-cat').value;
+  if (!nombre) { showToast('El nombre no puede estar vacio'); return; }
+  var arr  = biblioteca[catId] || [];
+  var item = arr[idx];
+  if (!item) return;
+  if (nuevaCat !== catId) {
+    arr.splice(idx, 1);
+    if (!biblioteca[nuevaCat]) biblioteca[nuevaCat] = [];
+    biblioteca[nuevaCat].push({ n: nombre, u: unit, q: qty, on: item.on });
+    curBibCat = nuevaCat;
+  } else {
+    item.n = nombre; item.u = unit; item.q = qty;
+  }
+  saveBiblio();
+  if (modalEl) modalEl.remove();
+  renderBibTabs(); renderBib(); autoSyncCatalogo();
+  showToast('Insumo actualizado');
+}
+
+function mostrarFormNuevoInsumo() {
+  var form = document.getElementById('nuevo-insumo-form');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  // Populate category select
+  var catSel = document.getElementById('new-ins-cat');
+  if (catSel) {
+    catSel.innerHTML = categorias.map(function(c) {
+      return '<option value="'+c.id+'"'+(c.id===curBibCat?' selected':'')+'>'+c.emoji+' '+c.nombre+'</option>';
+    }).join('');
+  }
+  if (form.style.display === 'block') {
+    var inp = document.getElementById('new-ins-nombre');
+    if (inp) inp.focus();
+  }
+}
+
+function guardarNuevoInsumo() {
+  var nombre = document.getElementById('new-ins-nombre').value.trim();
+  var unit   = document.getElementById('new-ins-unit').value;
+  var qty    = parseFloat(document.getElementById('new-ins-qty').value) || 1;
+  var catId  = document.getElementById('new-ins-cat').value;
+  if (!nombre) { showToast('Escribe el nombre del insumo'); return; }
+  if (!biblioteca[catId]) biblioteca[catId] = [];
+  if (biblioteca[catId].some(function(i){ return i.n.toLowerCase()===nombre.toLowerCase(); })) {
+    showToast('Ese insumo ya existe en esa categoría'); return;
+  }
+  biblioteca[catId].push({ n: nombre, u: unit, q: qty, on: true });
+  saveBiblio();
+  // Limpiar form
+  document.getElementById('new-ins-nombre').value = '';
+  document.getElementById('new-ins-qty').value = '1';
+  document.getElementById('nuevo-insumo-form').style.display = 'none';
+  curBibCat = catId;
+  renderBibTabs(); renderBib(); autoSyncCatalogo();
+  showToast('✅ Insumo agregado');
 }
 
 function moverInsumo(nombre, nuevaCat) {
